@@ -99,7 +99,7 @@ async function determineShareType(userId, appId, tournamentId = null) {
  * @param {string} userId - User's unique ID
  * @param {string} appId - App's unique ID
  * @param {Object} shareVerificationResult - Share verification result
- * @returns {Object} Reward calculation result
+ * @returns {Object} Reward calculation result (total_xp and total_points to be used with updateReferralStats)
  */
 async function calculateRegularShareRewards(userId, appId, shareVerificationResult = {}) {
     try {
@@ -208,7 +208,7 @@ async function calculateRegularShareRewards(userId, appId, shareVerificationResu
  * @param {string} appId - App's unique ID
  * @param {string} tournamentId - Tournament's unique ID
  * @param {Object} shareVerificationResult - Share verification result
- * @returns {Object} Tournament reward calculation result
+ * @returns {Object} Tournament reward calculation result (total_xp and total_points to be used with updateReferralStats)
  */
 async function calculateTournamentShareRewards(userId, appId, tournamentId, shareVerificationResult = {}) {
     try {
@@ -298,7 +298,7 @@ async function calculateTournamentShareRewards(userId, appId, tournamentId, shar
  * @param {string} appId - App's unique ID
  * @param {string} tournamentId - Tournament ID (optional)
  * @param {Object} shareVerificationResult - Share verification result
- * @returns {Object} Reward calculation result
+ * @returns {Object} Reward calculation result (total_xp and total_points to be used with updateReferralStats)
  */
 async function calculateShareRewards(userId, appId, tournamentId = null, shareVerificationResult = {}) {
     try {

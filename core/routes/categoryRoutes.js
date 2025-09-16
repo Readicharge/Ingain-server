@@ -1,6 +1,13 @@
 const express = require('express');
 const Category = require('../models/Common/Category.js');
 const App = require('../models/Common/App.js');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -15,7 +22,7 @@ router.get('/', async (req, res) => {
     }
 
     const categories = await Category.find(query).sort({ name: 1 });
-    res.json(categories);
+    res.json(listResponse(categories));
   } catch (error) {
     console.error('categoryRoutes.js error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -27,9 +34,9 @@ router.get('/:id', async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category) {
-      return res.status(404).json({ error: 'Category not found' });
+      return res.status(404).json(errorResponse('Category not found', 404));
     }
-    res.json(category);
+    res.json(itemResponse(category));
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

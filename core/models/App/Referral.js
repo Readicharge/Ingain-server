@@ -470,13 +470,13 @@ referralSchema.methods.awardReferrerBonus = async function () {
     const referrer = await PlatformUser.findOne({ unique_id: this.referrer_id });
 
     if (referrer) {
+        // Update current XP and points
         referrer.current_xp += this.rewards.referrer_bonus.xp;
         referrer.current_points += this.rewards.referrer_bonus.points;
-        referrer.total_xp_earned += this.rewards.referrer_bonus.xp;
-        referrer.total_points_earned += this.rewards.referrer_bonus.points;
-        referrer.total_referrals_completed += 1;
-
-        await referrer.save();
+        
+        // Use the PlatformUser method to update referral stats
+        // This will update total_xp_earned, total_points_earned, and referral earnings
+        await referrer.updateReferralStats(this.rewards.referrer_bonus.xp, this.rewards.referrer_bonus.points, true);
     }
 
     // Mark bonus as awarded
@@ -501,12 +501,13 @@ referralSchema.methods.awardReferredBonus = async function () {
     const referred = await PlatformUser.findOne({ unique_id: this.referred_id });
 
     if (referred) {
+        // Update current XP and points
         referred.current_xp += this.rewards.referred_bonus.xp;
         referred.current_points += this.rewards.referred_bonus.points;
-        referred.total_xp_earned += this.rewards.referred_bonus.xp;
-        referred.total_points_earned += this.rewards.referred_bonus.points;
-
-        await referred.save();
+        
+        // Use the PlatformUser method to update referral stats
+        // This will update total_xp_earned, total_points_earned, and referral earnings
+        await referred.updateReferralStats(this.rewards.referred_bonus.xp, this.rewards.referred_bonus.points, true);
     }
 
     // Mark bonus as awarded

@@ -1,6 +1,13 @@
 const express = require('express');
 const PlatformUser = require('../models/App/PlatformUser.js');
 const { authenticateToken } = require('../../middleware/auth.js');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -8,7 +15,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
-    res.json({
+    res.json(itemResponse({
       user: {
         unique_id: user.unique_id,
         name: user.name,
@@ -21,7 +28,7 @@ router.get('/', authenticateToken, async (req, res) => {
         last_login_at: user.last_login_at,
         created_at: user.created_at
       }
-    });
+    }));
   } catch (error) {
     console.error('profileRoutes.js error:', error);
     res.status(500).json({ error: 'Server error' });

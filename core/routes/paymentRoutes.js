@@ -20,6 +20,15 @@ const ActivityLog = require('../models/Technical/ActivityLog');
 const { authenticateToken, authenticateAdmin, requirePermission } = require('../../middleware/auth');
 const { processPayoutRequest, validatePayoutRequest, calculateFees } = require('../../utils/paymentAlgorithms');
 const { analyzeFraud } = require('../../utils/fraudAlgorithms');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    createdResponse,
+    notFoundResponse,
+    validationErrorResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -37,22 +46,14 @@ router.post('/payout', authenticateToken, async (req, res) => {
         const validationResult = await validatePayoutRequest(userId, amount, payment_method, payment_details);
 
         if (!validationResult.valid) {
-            return res.status(400).json({
-                success: false,
-                message: 'Payout request validation failed',
-                errors: validationResult.errors
-            });
+            return res.status(400).json(validationErrorResponse(validationResult.errors, 'Payout request validation failed'));
         }
 
         // Process payout request
         const payoutResult = await processPayoutRequest(userId, amount, payment_method, payment_details);
 
         if (!payoutResult.success) {
-            return res.status(400).json({
-                success: false,
-                message: payoutResult.message,
-                errors: payoutResult.errors
-            });
+            return res.status(400).json(validationErrorResponse(payoutResult.errors, payoutResult.message));
         }
 
         // Log activity
@@ -74,19 +75,14 @@ router.post('/payout', authenticateToken, async (req, res) => {
             }
         );
 
-        res.status(201).json({
-            success: true,
-            message: 'Payout request submitted successfully',
+        res.status(201).json(createdResponse({
             payment: payoutResult.payment,
             estimated_processing_time: payoutResult.estimatedProcessingTime
-        });
+        }, 'Payout request submitted successfully'));
 
     } catch (error) {
         console.error('Payment payout error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error during payout processing'
-        });
+        res.status(500).json(errorResponse('Internal server error during payout processing', 500));
     }
 });
 
@@ -124,10 +120,7 @@ router.get('/history', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Payment history error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to retrieve payment history'
-        });
+        res.status(500).json(errorResponse('Failed to retrieve payment history', 500));
     }
 });
 
@@ -144,10 +137,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const payment = await Payment.findOne({ unique_id: id, user_id: userId });
 
         if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Payment not found'
-            });
+            return res.status(404).json(notFoundResponse('Payment not found'));
         }
 
         res.json({
@@ -157,10 +147,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Payment details error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to retrieve payment details'
-        });
+        res.status(500).json(errorResponse('Failed to retrieve payment details', 500));
     }
 });
 
@@ -177,17 +164,11 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
         const payment = await Payment.findOne({ unique_id: id, user_id: userId });
 
         if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Payment not found'
-            });
+            return res.status(404).json(notFoundResponse('Payment not found'));
         }
 
         if (payment.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Only pending payments can be cancelled'
-            });
+            return res.status(400).json(errorResponse('Only pending payments can be cancelled', 400));
         }
 
         // Update payment status
@@ -229,10 +210,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Payment cancellation error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to cancel payment'
-        });
+        res.status(500).json(errorResponse('Failed to cancel payment', 500));
     }
 });
 
@@ -276,10 +254,7 @@ router.get('/admin/pending', authenticateAdmin, requirePermission('payment_appro
 
     } catch (error) {
         console.error('Admin pending payments error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to retrieve pending payments'
-        });
+        res.status(500).json(errorResponse('Failed to retrieve pending payments', 500));
     }
 });
 
@@ -297,10 +272,7 @@ router.post('/admin/:id/approve', authenticateAdmin, requirePermission('payment_
         const payment = await Payment.findOne({ unique_id: id, status: 'pending' });
 
         if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Pending payment not found'
-            });
+            return res.status(404).json(notFoundResponse('Pending payment not found'));
         }
 
         // Perform fraud analysis
@@ -312,11 +284,7 @@ router.post('/admin/:id/approve', authenticateAdmin, requirePermission('payment_
         });
 
         if (fraudAnalysis.risk_score > 0.8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment flagged for potential fraud',
-                fraud_details: fraudAnalysis
-            });
+            return res.status(400).json(errorResponse('Payment flagged for potential fraud', 400, fraudAnalysis));
         }
 
         // Update payment status
@@ -356,10 +324,7 @@ router.post('/admin/:id/approve', authenticateAdmin, requirePermission('payment_
 
     } catch (error) {
         console.error('Payment approval error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to approve payment'
-        });
+        res.status(500).json(errorResponse('Failed to approve payment', 500));
     }
 });
 
@@ -375,19 +340,13 @@ router.post('/admin/:id/reject', authenticateAdmin, requirePermission('payment_a
         const adminId = req.user.unique_id;
 
         if (!rejection_reason) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rejection reason is required'
-            });
+            return res.status(400).json(errorResponse('Rejection reason is required', 400));
         }
 
         const payment = await Payment.findOne({ unique_id: id, status: 'pending' });
 
         if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Pending payment not found'
-            });
+            return res.status(404).json(notFoundResponse('Pending payment not found'));
         }
 
         // Update payment status
@@ -435,10 +394,7 @@ router.post('/admin/:id/reject', authenticateAdmin, requirePermission('payment_a
 
     } catch (error) {
         console.error('Payment rejection error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to reject payment'
-        });
+        res.status(500).json(errorResponse('Failed to reject payment', 500));
     }
 });
 
@@ -499,10 +455,7 @@ router.get('/admin/analytics', authenticateAdmin, requirePermission('payment_ana
 
     } catch (error) {
         console.error('Payment analytics error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to retrieve payment analytics'
-        });
+        res.status(500).json(errorResponse('Failed to retrieve payment analytics', 500));
     }
 });
 

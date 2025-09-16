@@ -23,6 +23,16 @@ const ShareLog = require('../models/Technical/ShareLog');
 const FraudReport = require('../models/Technical/FraudReport');
 const ActivityLog = require('../models/Technical/ActivityLog');
 const { authenticateAdmin, requirePermission } = require('../../middleware/auth');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse,
+    createdResponse,
+    notFoundResponse,
+    validationErrorResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -260,14 +270,21 @@ router.post('/users/:id/adjust-points', authenticateAdmin, requirePermission('us
         }
 
         // Apply adjustments
-        if (xp_adjustment) {
-            user.current_xp = Math.max(0, user.current_xp + xp_adjustment);
-            user.total_xp_earned = Math.max(0, user.total_xp_earned + xp_adjustment);
-        }
-
-        if (points_adjustment) {
-            user.current_points = Math.max(0, user.current_points + points_adjustment);
-            user.total_points_earned = Math.max(0, user.total_points_earned + points_adjustment);
+        if (xp_adjustment || points_adjustment) {
+            // Use updateReferralStats to update total earnings consistently
+            user.updateReferralStats(
+                xp_adjustment || 0, 
+                points_adjustment || 0
+            );
+            
+            // Update current XP and points (updateReferralStats only updates total earnings)
+            if (xp_adjustment) {
+                user.current_xp = Math.max(0, user.current_xp + xp_adjustment);
+            }
+            
+            if (points_adjustment) {
+                user.current_points = Math.max(0, user.current_points + points_adjustment);
+            }
         }
 
         await user.save();

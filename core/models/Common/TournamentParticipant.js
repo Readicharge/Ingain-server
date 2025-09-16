@@ -428,8 +428,14 @@ tournamentParticipantSchema.methods.updatePerformance = function(shareData) {
     
     if (shareData.verified) {
         this.performance_metrics.verified_shares += 1;
-        this.performance_metrics.total_xp_earned += shareData.xp_awarded || 0;
-        this.performance_metrics.total_points_earned += shareData.points_awarded || 0;
+        
+        // Track XP and points earned in tournament
+        const xpAwarded = shareData.xp_awarded || 0;
+        const pointsAwarded = shareData.points_awarded || 0;
+        
+        // Always update the performance metrics directly
+        this.performance_metrics.total_xp_earned += xpAwarded;
+        this.performance_metrics.total_points_earned += pointsAwarded;
         
         // Calculate share score
         const shareScore = this.calculateShareScore(shareData);

@@ -4,6 +4,13 @@ const App = require('../models/Common/App.js');
 const Category = require('../models/Common/Category.js');
 const PlatformUser = require('../models/App/PlatformUser.js');
 const { authenticateToken } = require('../../middleware/auth.js');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    notFoundResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -30,10 +37,15 @@ router.post('/:id/successful-referral', authenticateToken, async (req, res) => {
     // Update user stats
     const user = await PlatformUserModel.findOne({ unique_id: userId });
     user.referral_count += 1;
-    user.total_xp_earned += app.app_xp;
-    user.total_points_earned += app.app_points;
+
+    // Use updateReferralStats to update XP and points consistently
+    // Use updateReferralStats to update total XP and points earned consistently
+    user.updateReferralStats(app.app_xp, app.app_points);
+
+    // Update current XP and points (updateReferralStats only updates total earnings)
     user.current_xp += app.app_xp;
     user.current_points += app.app_points;
+
     user.total_apps_shared += 1;
     user.last_share_date = new Date();
     // Badge check and addition
@@ -109,12 +121,13 @@ router.get('/', async (req, res) => {
       .skip((Number(page) - 1) * Number(limit))
       .exec();
     const total = await App.countDocuments(query);
-    res.json({
+    res.json(paginatedResponse(
       apps,
-      totalPages: Math.ceil(total / limit),
-      currentPage: Number(page),
-      total
-    });
+      Number(page),
+      Math.ceil(total / limit),
+      total,
+      Number(limit)
+    ));
   } catch (error) {
     console.log('appRoutes.js error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -129,10 +142,10 @@ router.get('/:id', async (req, res) => {
       .populate('categories');
 
     if (!app) {
-      return res.status(404).json({ error: 'App not found' });
+      return res.status(404).json(notFoundResponse('App not found'));
     }
 
-    res.json({ app });
+    res.json(itemResponse({ app }));
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -142,11 +155,8 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/save', authenticateToken, async (req, res) => {
   try {
     console.log('[POST] /apps/' + req.params.id + '/save', { user: req.user?._id });
-
-
     const appId = req.params.id;
     const userId = req.user._id;
-
     console.log(userId)
 
     // Check if app exists
@@ -157,6 +167,15 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
 
     // Check if already saved
     const user = await PlatformUser.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Initialize savedApps if it doesn't exist
+    if (!user.savedApps) {
+      user.savedApps = [];
+    }
+
     if (user.savedApps.includes(appId)) {
       return res.status(400).json({ error: 'App already saved' });
     }
@@ -171,6 +190,7 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 // Remove app from saved list
 // Remove app from saved list (POST /apps/:id/remove-saved)
@@ -192,7 +212,7 @@ router.post('/:id/remove-saved', authenticateToken, async (req, res) => {
 // Get user's saved apps (GET /apps/saved?page=1&limit=20)
 router.get('/saved', authenticateToken, async (req, res) => {
   try {
-    console.log('[GET] /apps/saved', { user: req.user?._id, query: req.query });
+
     const { page = 1, limit = 20 } = req.query;
     const user = await PlatformUser.findById(req.user._id)
       .populate({
@@ -210,6 +230,7 @@ router.get('/saved', authenticateToken, async (req, res) => {
       total
     });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -233,13 +254,17 @@ router.post('/:id/refer', authenticateToken, async (req, res) => {
     await app.save();
     // Update user stats
     const user = await PlatformUserModel.findOne({ unique_id: userId });
-    user.referral_count += 1;
-    user.total_xp_earned += app.app_xp;
-    user.total_points_earned += app.app_points;
+
+    // Use updateReferralStats to update total XP and points earned consistently
+    user.updateReferralStats(app.app_xp, app.app_points);
+
+    // Update current XP and points (updateReferralStats only updates total earnings)
     user.current_xp += app.app_xp;
     user.current_points += app.app_points;
+
     user.total_apps_shared += 1;
     user.last_share_date = new Date();
+    user.referral_count += 1;
     await user.save();
     res.json({
       message: 'App referred successfully',
@@ -266,15 +291,16 @@ router.get('/featured', async (req, res) => {
       .skip((page - 1) * limit)
       .exec();
     const total = await App.countDocuments({ is_active: true, is_featured: true });
-    res.json({
+    res.json(paginatedResponse(
       featuredApps,
-      totalPages: Math.ceil(total / limit),
-      currentPage: Number(page),
-      total
-    });
+      Number(page),
+      Math.ceil(total / limit),
+      total,
+      Number(limit)
+    ));
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json(errorResponse('Server error'));
   }
 });
 
@@ -329,4 +355,4 @@ router.get('/:id/stats', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

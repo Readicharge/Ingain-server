@@ -2,6 +2,13 @@ const express = require('express');
 const Badge = require('../models/Common/Badge.js');
 const PlatformUser = require('../models/App/PlatformUser.js');
 const { authenticateToken } = require('../../middleware/auth.js');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -22,12 +29,13 @@ router.get('/', async (req, res) => {
 
     const total = await Badge.countDocuments(query);
 
-    res.json({
+    res.json(paginatedResponse(
       badges,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page * 1, // Ensure page is a number
-      total
-    });
+      page * 1,
+      Math.ceil(total / limit),
+      total,
+      limit
+    ));
   } catch (error) {
     console.error('badgeRoutes.js error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -51,14 +59,32 @@ router.get('/:id', async (req, res) => {
 });
 
 // Get user's badges
-router.get('/user/badges', authenticateToken, async (req, res) => {
+router.get('/user', authenticateToken, async (req, res) => {
   try {
-    const user = await PlatformUser.findById(req.user._id)
+    const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
+    if (!user) {
+      return res.status(404).json(errorResponse('User not found', 404));
+    }
 
-    res.json({ badges: user.badges });
+    // Get user's badges with full badge details
+    const userBadges = await Badge.find({ 
+      unique_id: { $in: user.badges_ids || [] } 
+    });
+
+    const badges = userBadges.map(badge => ({
+      _id: badge._id,
+      badge_name: badge.badge_name,
+      badge_description: badge.badge_description,
+      badge_icon: badge.badge_icon,
+      earned_at: new Date().toISOString(), // TODO: Store actual earned date
+      xp_reward: badge.xp_reward,
+      points_reward: badge.points_reward
+    }));
+
+    res.json(listResponse(badges));
   } catch (error) {
     console.log('badgeRoutes.js error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json(errorResponse('Server error'));
   }
 });
 
@@ -156,9 +182,13 @@ router.get('/type/:type', async (req, res) => {
 });
 
 // Get user's badge progress
-router.get('/user/progress', authenticateToken, async (req, res) => {
+router.get('/progress', authenticateToken, async (req, res) => {
   try {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
+    if (!user) {
+      return res.status(404).json(errorResponse('User not found', 404));
+    }
+
     const allBadges = await Badge.find({ is_active: true });
     const badgeAlgorithms = require('../utils/badgeAlgorithms');
     const currentUserStats = {
@@ -170,20 +200,22 @@ router.get('/user/progress', authenticateToken, async (req, res) => {
       successful_referrals_count: user.successful_referrals_count,
       user_level: user.user_level
     };
+    
     const progress = await Promise.all(allBadges.map(async badge => {
       const hasBadge = user.badges_ids.includes(badge.unique_id);
       const eligibility = await badgeAlgorithms.checkBadgeEligibility(user.unique_id, badge.unique_id, 'progress_check', currentUserStats);
       return {
-        badge,
-        hasBadge,
-        currentValue: eligibility.current_value,
-        maxValue: badge.threshold_value,
-        progress: Math.min(eligibility.progress_percentage, 100)
+        badge_id: badge.unique_id,
+        badge_name: badge.badge_name,
+        current_progress: eligibility.current_value || 0,
+        required_progress: badge.criteria?.target_value || 0,
+        progress_percentage: Math.min(eligibility.progress_percentage || 0, 100)
       };
     }));
-    res.json({ progress });
+    
+    res.json(listResponse(progress));
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json(errorResponse('Server error'));
   }
 });
 

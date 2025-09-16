@@ -119,10 +119,13 @@ async function grantBadge(userId, badgeId, achievementContext = {}) {
             user.badges_ids.push(badgeId);
         }
         user.total_badges_earned += 1;
+        
+        // Use updateReferralStats to update total XP and points earned consistently
+        user.updateReferralStats(badge.xp_value_gifted, badge.points_value_gifted);
+        
+        // Update current XP and points (updateReferralStats only updates total earnings)
         user.current_xp += badge.xp_value_gifted;
-        user.total_xp_earned += badge.xp_value_gifted;
         user.current_points += badge.points_value_gifted;
-        user.total_points_earned += badge.points_value_gifted;
 
         // Recalculate level
         const newLevel = calculateUserLevel(user.current_xp);
@@ -201,8 +204,9 @@ async function evaluateUserBadges(userId, triggerEvent, eventContext = {}) {
                     // Update stats for next iteration
                     currentUserStats.current_xp += badge.xp_value_gifted;
                     currentUserStats.current_points += badge.points_value_gifted;
-                    currentUserStats.total_xp_earned += badge.xp_value_gifted;
-                    currentUserStats.total_points_earned += badge.points_value_gifted;
+                    // Note: The actual user document will be updated via updateReferralStats when the badge is granted
+                    // updateReferralStats will update total_xp_earned and total_points_earned
+                    // We're just updating the tracking object here
                     currentUserStats.total_badges_earned += 1;
                 }
             }

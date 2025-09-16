@@ -19,6 +19,14 @@ const PlatformUser = require('../models/App/PlatformUser');
 const ActivityLog = require('../models/Technical/ActivityLog');
 const { authenticateToken } = require('../../middleware/auth');
 const config = require('../../config');
+const { 
+    successResponse, 
+    errorResponse, 
+    createdResponse, 
+    validationErrorResponse,
+    notFoundResponse,
+    unauthorizedResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -137,19 +145,19 @@ router.post('/register', async (req, res) => {
         // Validate required fields
         if (!name || !email || !password) {
             console.log("Missing required fields")
-            return res.status(400).json({
-                success: false,
-                message: 'Name, email, and password are required'
-            });
+            return res.status(400).json(validationErrorResponse(
+                ['Name, email, and password are required'],
+                'Validation failed'
+            ));
         }
 
         // Validate password strength
         if (password.length < 8) {
             console.log("Incorrect format for the password")
-            return res.status(400).json({
-                success: false,
-                message: 'Password must be at least 8 characters long'
-            });
+            return res.status(400).json(validationErrorResponse(
+                ['Password must be at least 8 characters long'],
+                'Validation failed'
+            ));
         }
 
         // Check if user already exists
@@ -159,10 +167,10 @@ router.post('/register', async (req, res) => {
 
         if (existingUser) {
             console.log("Existing User", email, phone)
-            return res.status(400).json({
-                success: false,
-                message: 'User with this email or phone already exists'
-            });
+            return res.status(400).json(validationErrorResponse(
+                ['User with this email or phone already exists'],
+                'Validation failed'
+            ));
         }
 
         // Generate unique referral code
@@ -206,20 +214,32 @@ router.post('/register', async (req, res) => {
         // Generate JWT token
         const token = generateJWTToken(user);
 
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully',
-            data: {
-                user: {
-                    id: user.unique_id,
-                    name: user.name,
-                    email: user.email,
-                    referral_code: user.referral_code,
-                    user_level: user.user_level
-                },
-                token: token
-            }
-        });
+        // Return complete user object as expected by frontend
+        const userResponse = {
+            id: user.unique_id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar || null,
+            current_xp: user.current_xp || 0,
+            current_points: user.current_points || 0,
+            referral_code: user.referral_code,
+            user_level: user.user_level,
+            kyc_status: user.kyc_status || 'pending',
+            email_verified: user.email_verified || false,
+            badges_ids: user.badges_ids || [],
+            tournaments: user.tournaments || [],
+            saved_apps: user.saved_apps || [],
+            activity_history: user.activity_history || [],
+            is_active: user.is_active,
+            created_at: user.created_at,
+            updated_at: user.updated_at
+        };
+
+        res.status(201).json(createdResponse({
+            token: token,
+            refresh_token: null, // TODO: Implement refresh token
+            user: userResponse
+        }, 'User registered successfully'));
 
     } catch (error) {
         console.error('Registration error:', error);
@@ -390,27 +410,33 @@ router.post('/login', async (req, res) => {
         const token = generateJWTToken(user);
         console.log('✅ JWT token generated successfully');
 
-        const responseData = {
-            success: true,
-            message: 'Login successful',
-            data: {
-                user: {
-                    id: user.unique_id,
-                    name: user.name,
-                    email: user.email,
-                    user_level: user.user_level,
-                    current_xp: user.current_xp,
-                    current_points: user.current_points,
-                    referral_code: user.referral_code,
-                    email_verified: user.email_verified,
-                    kyc_status: user.kyc_status
-                },
-                token: token
-            }
+        // Return complete user object as expected by frontend
+        const userResponse = {
+            id: user.unique_id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar || null,
+            current_xp: user.current_xp || 0,
+            current_points: user.current_points || 0,
+            referral_code: user.referral_code,
+            user_level: user.user_level,
+            kyc_status: user.kyc_status || 'pending',
+            email_verified: user.email_verified || false,
+            badges_ids: user.badges_ids || [],
+            tournaments: user.tournaments || [],
+            saved_apps: user.saved_apps || [],
+            activity_history: user.activity_history || [],
+            is_active: user.is_active,
+            created_at: user.created_at,
+            updated_at: user.updated_at
         };
 
         console.log('🎉 Login successful for user:', user.email);
-        res.json(responseData);
+        res.json(successResponse({
+            token: token,
+            refresh_token: null, // TODO: Implement refresh token
+            user: userResponse
+        }, 'Login successful'));
 
     } catch (error) {
         console.error('💥 Login error:', error);
@@ -458,13 +484,10 @@ router.post('/refresh', async (req, res) => {
         // Generate new access token
         const newToken = generateJWTToken(user);
 
-        res.json({
-            success: true,
-            message: 'Token refreshed successfully',
-            data: {
-                token: newToken
-            }
-        });
+        res.json(successResponse({
+            token: newToken,
+            refresh_token: null // TODO: Implement refresh token
+        }, 'Token refreshed successfully'));
 
     } catch (error) {
         console.error('Token refresh error:', error);
@@ -499,10 +522,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
             'User logged out successfully'
         );
 
-        res.json({
-            success: true,
-            message: 'Logout successful'
-        });
+        res.json(successResponse(null, 'Logout successful'));
 
     } catch (error) {
         console.error('Logout error:', error);
@@ -562,10 +582,7 @@ router.post('/forgot-password', async (req, res) => {
             'Password reset requested'
         );
 
-        res.json({
-            success: true,
-            message: 'If an account with this email exists, a password reset link has been sent'
-        });
+        res.json(successResponse(null, 'If an account with this email exists, a password reset link has been sent'));
 
     } catch (error) {
         console.error('Forgot password error:', error);
@@ -638,10 +655,7 @@ router.post('/reset-password', async (req, res) => {
             'Password reset completed successfully'
         );
 
-        res.json({
-            success: true,
-            message: 'Password reset successfully'
-        });
+        res.json(successResponse(null, 'Password reset successfully'));
 
     } catch (error) {
         console.error('Reset password error:', error);
@@ -679,12 +693,9 @@ router.get('/profile', authenticateToken, async (req, res) => {
             });
         }
 
-        res.json({
-            success: true,
-            data: {
-                user: user
-            }
-        });
+        res.json(successResponse({
+            user: user
+        }));
 
     } catch (error) {
         console.error('Get profile error:', error);
@@ -732,13 +743,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
             { updated_fields: Object.keys(updates) }
         );
 
-        res.json({
-            success: true,
-            message: 'Profile updated successfully',
-            data: {
-                user: user
-            }
-        });
+        res.json(successResponse({
+            user: user
+        }, 'Profile updated successfully'));
 
     } catch (error) {
         console.error('Update profile error:', error);
@@ -806,10 +813,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
             'Password changed successfully'
         );
 
-        res.json({
-            success: true,
-            message: 'Password changed successfully'
-        });
+        res.json(successResponse(null, 'Password changed successfully'));
 
     } catch (error) {
         console.error('Change password error:', error);
@@ -896,8 +900,9 @@ async function processReferral(newUser, referralCode) {
 
         newUser.current_xp += welcomeBonus.xp;
         newUser.current_points += welcomeBonus.points;
-        newUser.total_xp_earned += welcomeBonus.xp;
-        newUser.total_points_earned += welcomeBonus.points;
+        
+        // Use updateReferralStats to consistently update XP and points
+        await newUser.updateReferralStats(welcomeBonus.xp, welcomeBonus.points);
         await newUser.save();
 
         // Log referral activity
@@ -924,4 +929,4 @@ async function processReferral(newUser, referralCode) {
     }
 }
 
-module.exports = router; 
+module.exports = router;

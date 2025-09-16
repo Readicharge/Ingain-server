@@ -15,6 +15,15 @@ const express = require('express');
 const Notification = require('../models/Technical/Notification');
 const PlatformUser = require('../models/App/PlatformUser');
 const { authenticateToken, authenticateAdmin } = require('../../middleware/auth');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse,
+    createdResponse,
+    notFoundResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 

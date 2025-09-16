@@ -106,9 +106,20 @@ platformUserSchema.methods.generateReferralCode = function () {
 
 // Update referral statistics
 platformUserSchema.methods.updateReferralStats = function (xpEarned = 0, pointsEarned = 0) {
+    // Update total earnings
+    this.total_xp_earned += xpEarned;
+    this.total_points_earned += pointsEarned;
+    
+    // Also update referral-specific earnings tracking
     this.total_referral_earnings.xp += xpEarned;
     this.total_referral_earnings.points += pointsEarned;
-    this.total_referrals_completed += 1;
+    
+    // Only increment completed referrals if this was actually a referral
+    // and not just a general XP/points update
+    if (arguments.length > 2 && arguments[2] === true) {
+        this.total_referrals_completed += 1;
+    }
+    
     return this.save();
 };
 

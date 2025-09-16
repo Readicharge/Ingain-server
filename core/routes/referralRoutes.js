@@ -16,6 +16,16 @@ const PlatformUser = require('../models/App/PlatformUser.js');
 const Referral = require('../models/App/Referral.js');
 const App = require('../models/Common/App.js');
 const { authenticateToken } = require('../../middleware/auth.js');
+const { 
+    successResponse, 
+    errorResponse, 
+    paginatedResponse, 
+    itemResponse,
+    listResponse,
+    createdResponse,
+    notFoundResponse,
+    validationErrorResponse
+} = require('../../utils/responseHelper');
 
 const router = express.Router();
 
@@ -24,10 +34,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json(notFoundResponse('User not found'));
     }
 
     // Get detailed referral statistics using Referral model
@@ -57,16 +64,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
       detailed_stats: referralStats
     };
 
-    res.json({
-      success: true,
-      stats
-    });
+    res.json(successResponse(stats));
   } catch (error) {
     console.error('Referral stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -77,10 +78,7 @@ router.get('/history', authenticateToken, async (req, res) => {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json(notFoundResponse('User not found'));
     }
 
     // Build query for referrals
@@ -126,10 +124,7 @@ router.get('/history', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Referral history error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -220,10 +215,7 @@ router.get('/leaderboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Leaderboard error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -290,10 +282,7 @@ router.post('/create', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Create referral error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -333,10 +322,7 @@ router.put('/progress/:referralId', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Update progress error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -387,10 +373,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json(notFoundResponse('User not found'));
     }
 
     // Get daily analytics
@@ -409,10 +392,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Analytics error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -422,10 +402,7 @@ router.post('/code/generate', authenticateToken, async (req, res) => {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json(notFoundResponse('User not found'));
     }
 
     // Generate new referral code
@@ -439,10 +416,7 @@ router.post('/code/generate', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Generate code error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -477,10 +451,7 @@ router.get('/:referralId', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get referral error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -490,10 +461,7 @@ router.get('/progress', authenticateToken, async (req, res) => {
     const user = await PlatformUser.findOne({ unique_id: req.user.unique_id });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json(notFoundResponse('User not found'));
     }
 
     // Calculate referral milestones
@@ -521,10 +489,7 @@ router.get('/progress', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Progress error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -549,10 +514,7 @@ router.get('/admin/pending', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Admin pending error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 
@@ -569,10 +531,7 @@ router.post('/admin/cleanup-expired', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Cleanup error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
+    res.status(500).json(errorResponse('Server error', 500));
   }
 });
 

@@ -63,6 +63,58 @@
 
 ---
 
+### GET `/api/auth/debug/users`
+**Description**: Debug endpoint to list all users (development only)
+
+**Input Fields**: None
+
+**Expected Output**:
+```json
+{
+  "success": true,
+  "users": [
+    {
+      "unique_id": "string",
+      "name": "string",
+      "email": "string",
+      "current_xp": "number",
+      "current_points": "number",
+      "user_level": "number",
+      "created_at": "date"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/auth/debug/users/:id`
+**Description**: Debug endpoint to get specific user details (development only)
+
+**Input Fields**: 
+- `id` (URL parameter): User unique ID
+
+**Expected Output**:
+```json
+{
+  "success": true,
+  "user": {
+    "unique_id": "string",
+    "name": "string",
+    "email": "string",
+    "phone": "string",
+    "address": "object",
+    "current_xp": "number",
+    "current_points": "number",
+    "user_level": "number",
+    "created_at": "date",
+    "updated_at": "date"
+  }
+}
+```
+
+---
+
 ### POST `/api/auth/login`
 **Description**: Authenticate user and return JWT token
 
@@ -334,6 +386,29 @@ sortOrder: string (optional)
 
 ---
 
+### GET `/api/apps/:id/stats`
+**Description**: Get app statistics including referral count and XP awarded
+
+**Input Fields**: None (app ID in URL)
+
+**Expected Output**:
+```json
+{
+  "success": true,
+  "stats": {
+    "app_id": "string",
+    "app_name": "string",
+    "total_referrals": "number",
+    "total_xp_awarded": "number",
+    "total_points_awarded": "number",
+    "active_users": "number",
+    "conversion_rate": "number"
+  }
+}
+```
+
+---
+
 ### POST `/api/apps/:id/successful-referral`
 **Description**: Process successful app referral and award rewards
 
@@ -361,6 +436,7 @@ sortOrder: string (optional)
 
 ## 🏆 Badge Routes
 
+
 ### GET `/api/badges`
 **Description**: Get all available badges
 
@@ -374,26 +450,12 @@ active: boolean (optional)
 **Expected Output**:
 ```json
 {
-  "success": true,
   "badges": [
-    {
-      "unique_id": "string",
-      "badge_name": "string",
-      "badge_description": "string",
-      "badge_icon": "string",
-      "badge_type": "string",
-      "rarity": "string",
-      "criteria": "object",
-      "xp_reward": "number",
-      "points_reward": "number",
-      "is_active": "boolean"
-    }
+    // Badge objects as per Badge model
   ],
-  "pagination": {
-    "current_page": "number",
-    "total_pages": "number",
-    "total_items": "number"
-  }
+  "totalPages": "number",
+  "currentPage": "number",
+  "total": "number"
 }
 ```
 
@@ -531,6 +593,7 @@ active: boolean (optional)
 
 ## 🏁 Competition Routes
 
+
 ### GET `/api/competitions`
 **Description**: Get all tournaments with filtering
 
@@ -545,30 +608,67 @@ upcoming: boolean (optional)
 **Expected Output**:
 ```json
 {
-  "success": true,
   "tournaments": [
     {
       "unique_id": "string",
       "tournament_name": "string",
       "tournament_description": "string",
+      "tournament_category": "string",
+      "tournament_type": "string",
       "start_date": "date",
       "end_date": "date",
-      "prize_pool": "number",
-      "max_participants": "number",
-      "total_participants": "number",
+      "registration_deadline": "date",
+      "apps_involved": ["string"],
+      "prizes": {
+        "first_place": { "xp": "number", "points": "number", "cash": "number" },
+        "second_place": { "xp": "number", "points": "number", "cash": "number" },
+        "third_place": { "xp": "number", "points": "number", "cash": "number" },
+        "participation": { "xp": "number", "points": "number" }
+      },
+      "total_xp_allocated": "number",
+      "total_points_allocated": "number",
+      "eligible_regions": ["string"],
+      "eligible_cities": ["string"],
+      "participant_details": {
+        "max_participants": "number",
+        "min_level_required": "number",
+        "registration_fee": "number",
+        "current_participants": "number"
+      },
+      "winners": "object",
+      "tournament_rules": {
+        "scoring_method": "string",
+        "bonus_multiplier": "number",
+        "min_shares_required": "number",
+        "max_shares_per_day": "number",
+        "tie_breaker": "string",
+        "disqualification_rules": ["string"],
+        "verification_required": "boolean"
+      },
+      "status": "string",
       "is_active": "boolean",
-      "apps": ["array"]
+      "total_shares": "number",
+      "total_participants": "number",
+      "total_referral_count": "number",
+      "reward_multiplier": "number",
+      "created_at": "date",
+      "updated_at": "date",
+      "created_by": "string",
+      "duration_days": "number",
+      "time_until_start": "number",
+      "time_remaining": "number",
+      "registration_open": "boolean",
+      "progress_percentage": "number"
     }
   ],
-  "pagination": {
-    "current_page": "number",
-    "total_pages": "number",
-    "total_items": "number"
-  }
+  "totalPages": "number",
+  "currentPage": "number",
+  "total": "number"
 }
 ```
 
 ---
+
 
 ### GET `/api/competitions/:id`
 **Description**: Get specific tournament details
@@ -578,20 +678,56 @@ upcoming: boolean (optional)
 **Expected Output**:
 ```json
 {
-  "success": true,
   "tournament": {
     "unique_id": "string",
     "tournament_name": "string",
     "tournament_description": "string",
+    "tournament_category": "string",
+    "tournament_type": "string",
     "start_date": "date",
     "end_date": "date",
-    "prize_pool": "number",
-    "max_participants": "number",
-    "total_participants": "number",
+    "registration_deadline": "date",
+    "apps_involved": ["string"],
+    "prizes": {
+      "first_place": { "xp": "number", "points": "number", "cash": "number" },
+      "second_place": { "xp": "number", "points": "number", "cash": "number" },
+      "third_place": { "xp": "number", "points": "number", "cash": "number" },
+      "participation": { "xp": "number", "points": "number" }
+    },
+    "total_xp_allocated": "number",
+    "total_points_allocated": "number",
+    "eligible_regions": ["string"],
+    "eligible_cities": ["string"],
+    "participant_details": {
+      "max_participants": "number",
+      "min_level_required": "number",
+      "registration_fee": "number",
+      "current_participants": "number"
+    },
+    "winners": "object",
+    "tournament_rules": {
+      "scoring_method": "string",
+      "bonus_multiplier": "number",
+      "min_shares_required": "number",
+      "max_shares_per_day": "number",
+      "tie_breaker": "string",
+      "disqualification_rules": ["string"],
+      "verification_required": "boolean"
+    },
+    "status": "string",
     "is_active": "boolean",
-    "apps": ["array"],
-    "rules": ["array"],
-    "reward_multiplier": "number"
+    "total_shares": "number",
+    "total_participants": "number",
+    "total_referral_count": "number",
+    "reward_multiplier": "number",
+    "created_at": "date",
+    "updated_at": "date",
+    "created_by": "string",
+    "duration_days": "number",
+    "time_until_start": "number",
+    "time_remaining": "number",
+    "registration_open": "boolean",
+    "progress_percentage": "number"
   }
 }
 ```
@@ -1195,10 +1331,55 @@ payment_type: string (optional)
   "payments": [
     {
       "unique_id": "string",
+      "user_id": "string",
+      "host_id": "string",
+      "payment_type": "string",
       "amount": "number",
+      "currency": "string",
+      "points_converted": "number",
+      "conversion_rate": "number",
       "payment_method": "string",
+      "payment_details": {
+        "account_name": "string",
+        "account_number": "string",
+        "routing_number": "string",
+        "swift_code": "string",
+        "paypal_email": "string",
+        "stripe_payment_intent": "string",
+        "crypto_address": "string",
+        "check_number": "string"
+      },
       "status": "string",
-      "created_at": "date"
+      "external_transaction_id": "string",
+      "processor_name": "string",
+      "requires_approval": "boolean",
+      "approved_by": "string",
+      "approved_at": "date",
+      "rejection_reason": "string",
+      "initiated_at": "date",
+      "completed_at": "date",
+      "failed_at": "date",
+      "failure_reason": "string",
+      "processing_fee": "number",
+      "platform_fee": "number",
+      "net_amount": "number",
+      "idempotency_key": "string",
+      "notes": "string",
+      "metadata": {
+        "source": "string",
+        "campaign_id": "string",
+        "tournament_id": "string",
+        "badge_id": "string",
+        "referral_id": "string",
+        "risk_score": "number",
+        "fraud_flags": ["string"]
+      },
+      "created_at": "date",
+      "updated_at": "date",
+      "total_fees": "number",
+      "processing_time": "number",
+      "is_high_value": "boolean",
+      "risk_level": "string"
     }
   ],
   "pagination": {
@@ -1266,13 +1447,58 @@ max_amount: number (optional)
 ```json
 {
   "success": true,
-  "payments": [
-    {
-      "unique_id": "string",
-      "amount": "number",
-      "payment_method": "string",
-      "user_id": {
-        "name": "string",
+  "payment": {
+    "unique_id": "string",
+    "user_id": "string",
+    "host_id": "string",
+    "payment_type": "string",
+    "amount": "number",
+    "currency": "string",
+    "points_converted": "number",
+    "conversion_rate": "number",
+    "payment_method": "string",
+    "payment_details": {
+      "account_name": "string",
+      "account_number": "string",
+      "routing_number": "string",
+      "swift_code": "string",
+      "paypal_email": "string",
+      "stripe_payment_intent": "string",
+      "crypto_address": "string",
+      "check_number": "string"
+    },
+    "status": "string",
+    "external_transaction_id": "string",
+    "processor_name": "string",
+    "requires_approval": "boolean",
+    "approved_by": "string",
+    "approved_at": "date",
+    "rejection_reason": "string",
+    "initiated_at": "date",
+    "completed_at": "date",
+    "failed_at": "date",
+    "failure_reason": "string",
+    "processing_fee": "number",
+    "platform_fee": "number",
+    "net_amount": "number",
+    "idempotency_key": "string",
+    "notes": "string",
+    "metadata": {
+      "source": "string",
+      "campaign_id": "string",
+      "tournament_id": "string",
+      "badge_id": "string",
+      "referral_id": "string",
+      "risk_score": "number",
+      "fraud_flags": ["string"]
+    },
+    "created_at": "date",
+    "updated_at": "date",
+    "total_fees": "number",
+    "processing_time": "number",
+    "is_high_value": "boolean",
+    "risk_level": "string"
+  },
         "email": "string",
         "phone": "string",
         "region": "string"
